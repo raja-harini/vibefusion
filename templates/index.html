@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VibeFusion Emotion Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; text-align: center; }
+        #emotions { font-size: 24px; margin-top: 20px; }
+        #combined { font-weight: bold; color: blue; margin-top: 10px; }
+        button { padding: 10px 20px; font-size: 16px; }
+        #realTimeEmotion { font-size: 48px; color: #333; margin-top:40px; }
+    </style>
+</head>
+<body>
+    <h1>VibeFusion Real-Time Emotion Recognition</h1>
+    
+    <button onclick="fetchEmotion()">Get Emotion</button>
+    
+    <div id="emotions"></div>
+    <div id="combined"></div>
+
+    <h2>Real-time Emotion Updates</h2>
+    <div id="realTimeEmotion">Waiting for emotion data...</div>
+
+    <script>
+        // Fetch emotion on button click from /get-emotion API
+        async function fetchEmotion() {
+            const response = await fetch('/get-emotion');
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('emotions').innerHTML = `
+                    Facial: ${data.facial_emotion} <br>
+                    Speech: ${data.speech_emotion} <br>
+                    EEG: ${data.eeg_emotion}
+                `;
+                document.getElementById('combined').textContent = 
+                    'Combined Emotion: ' + data.combined_emotion;
+            } else {
+                alert('Error fetching emotion data');
+            }
+        }
+
+        // Initialize Socket.IO client for real-time emotion updates
+        const socket = io();
+
+        // Listen for 'update_emotion' event and update display
+        socket.on('update_emotion', function(data) {
+            document.getElementById('realTimeEmotion').innerText = 
+                `Detected Emotion: ${data.emotion}`;
+        });
+    </script>
+</body>
+</html>

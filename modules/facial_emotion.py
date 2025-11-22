@@ -1,7 +1,28 @@
 import cv2
 from deepface import DeepFace
 
-def get_facial_emotion():
+
+def get_facial_emotion(frame):
+    """
+    Analyze the given webcam frame and return the detected facial emotion.
+    Handles cases of multiple faces by extracting the first face emotion.
+    """
+    emotion = None
+    try:
+        analysis = DeepFace.analyze(frame, actions=['emotion'], enforce_detection=False)
+        # Handle multiple faces or single face result:
+        if isinstance(analysis, list):
+            # Take first face's emotion
+            emotion = analysis[0]['dominant_emotion']
+        else:
+            emotion = analysis['dominant_emotion']
+    except Exception as e:
+        print(f"Facial emotion detection error: {e}")
+        emotion = None
+    return emotion
+
+
+def get_facial_emotion_from_webcam():
     # Open webcam
     cap = cv2.VideoCapture(0)
     ret, frame = cap.read()
@@ -10,17 +31,13 @@ def get_facial_emotion():
     if not ret:
         return None, None
     
-    try:
-        analysis = DeepFace.analyze(frame, actions=['emotion'], enforce_detection=False)
-        emotion = analysis['dominant_emotion']
-    except:
-        emotion = None
-
+    emotion = get_facial_emotion(frame)
     return frame, emotion
+
 
 while True:
     # Get latest frame and emotion
-    frame, emotion = get_facial_emotion()
+    frame, emotion = get_facial_emotion_from_webcam()
     if frame is None:
         break
 
