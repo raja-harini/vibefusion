@@ -5,8 +5,8 @@ data/*
 !data/gameemo_train_subset/eeg_metadata_train.csv
 !data/gameemo_train_subset/eeg_metadata_train.py
 !data/gameemo_train_subset/labels_train.csv
-!data/meld_test_subset/labels_test.csv/
-!data/meld_test_subset/test_sent_emo.csv/
-!data/meld_train_subset/labels_train.csv/
+!data/meld_test_subset/labels_test.csv
+!data/meld_test_subset/test_sent_emo.csv
+!data/meld_train_subset/labels_train.csv
 !data/meld_train_subset/train_sent_emo.csv
 !data/processed/
