@@ -1,0 +1,11 @@
+file_path,emotion
+(S06)\Preprocessed EEG Data\.csv format\S06G4AllChannels.csv,angry/frustrated
+(S12)\Preprocessed EEG Data\.csv format\S12G4AllChannels.csv,happy/excited
+(S10)\Preprocessed EEG Data\.csv format\S10G2AllChannels.csv,angry/frustrated
+(S07)\Preprocessed EEG Data\.csv format\S07G2AllChannels.csv,relaxed/content
+(S13)\Preprocessed EEG Data\.csv format\S13G3AllChannels.csv,happy/excited
+(S07)\Preprocessed EEG Data\.csv format\S07G4AllChannels.csv,relaxed/content
+(S15)\Preprocessed EEG Data\.csv format\S15G2AllChannels.csv,happy/excited
+(S15)\Preprocessed EEG Data\.csv format\S15G4AllChannels.csv,angry/frustrated
+(S08)\Preprocessed EEG Data\.csv format\S08G4AllChannels.csv,sad/depressed
+(S09)\Preprocessed EEG Data\.csv format\S09G1AllChannels.csv,sad/depressed

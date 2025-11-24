@@ -1,12 +1,47 @@
+# Ignore everything inside data/
 data/*
+
+###############
+# gameemo_test_subset
+###############
+# Unignore the folder, but ignore everything inside
+!data/gameemo_test_subset/
+data/gameemo_test_subset/*
+
+# Unignore only these files
 !data/gameemo_test_subset/eeg_metadata_test.csv
 !data/gameemo_test_subset/eeg_metadata_test.py
 !data/gameemo_test_subset/labels_test.csv
+
+###############
+# gameemo_train_subset
+###############
+!data/gameemo_train_subset/
+data/gameemo_train_subset/*
+
 !data/gameemo_train_subset/eeg_metadata_train.csv
 !data/gameemo_train_subset/eeg_metadata_train.py
 !data/gameemo_train_subset/labels_train.csv
+
+###############
+# meld_test_subset
+###############
+!data/meld_test_subset/
+data/meld_test_subset/*
+
 !data/meld_test_subset/labels_test.csv
 !data/meld_test_subset/test_sent_emo.csv
+
+###############
+# meld_train_subset
+###############
+!data/meld_train_subset/
+data/meld_train_subset/*
+
 !data/meld_train_subset/labels_train.csv
 !data/meld_train_subset/train_sent_emo.csv
+
+###############
+# processed folder — track everything inside it
+###############
 !data/processed/
