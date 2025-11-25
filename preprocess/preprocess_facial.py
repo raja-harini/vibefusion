@@ -39,3 +39,7 @@ if __name__ == '__main__':
     meld_train_dir = 'data/meld_train_subset'
     processed_output_root = 'data/processed/facial/train'
     preprocess_all_videos(meld_train_dir, processed_output_root)
+
+    meld_test_dir = 'data/meld_test_subset'
+    processed_test_output = 'data/processed/facial/test'
+    preprocess_all_videos(meld_test_dir, processed_test_output)

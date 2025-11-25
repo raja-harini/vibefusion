@@ -1,8 +1,8 @@
-import numpy as np
-from scipy.signal import butter, lfilter
 import os
 import glob
 import pandas as pd
+import numpy as np
+from scipy.signal import butter, lfilter
 
 def butter_bandpass(lowcut, highcut, fs, order=5):
     nyq = 0.5 * fs
@@ -28,24 +28,19 @@ def preprocess_eeg_signal(eeg_data, output_dir, sample_name):
         np.save(os.path.join(output_dir, f"{sample_name}_seg_{start}.npy"), segment)
     print(f"Saved {len(segments)} EEG segments for {sample_name}")
 
-def preprocess_all_eeg_files(input_base_dir=r'data/gameemo_train_subset',
-                             output_base_dir=r'data/processed/eeg/train'):
-    # Normalize path for glob and escape parentheses
+def preprocess_all_eeg_files(input_base_dir, output_base_dir):
+    # Normalize path and escape parentheses for glob
     input_base_dir = os.path.normpath(input_base_dir)
-    search_folder = os.path.join(input_base_dir, '**', 'Preprocessed EEG Data','.csv format')
+    search_folder = os.path.join(input_base_dir, '**', 'Preprocessed EEG Data', '.csv format', '*.csv')
 
-    # On Windows, escape parentheses as glob uses regex patterns
-    # Replace '(' with '[()]' and ')' with '[)]' to match literally
+    # Escape parentheses for Windows glob pattern
     def escape_parentheses(path):
         return path.replace('(', '[()]').replace(')', '[)]')
 
     escaped_search_folder = escape_parentheses(search_folder)
 
-    pattern = os.path.join(escaped_search_folder, '*.csv').replace('\\', '/')
-    print(f"Looking for files in pattern: {pattern}")
-
-    file_list = glob.glob(pattern, recursive=True)
-    print(f"Found {len(file_list)} EEG CSV files for preprocessing.")
+    file_list = glob.glob(escaped_search_folder, recursive=True)
+    print(f"Found {len(file_list)} EEG CSV files in {input_base_dir} for preprocessing.")
 
     if not file_list:
         print("No files found. Please check folder names & paths carefully.")
@@ -54,18 +49,15 @@ def preprocess_all_eeg_files(input_base_dir=r'data/gameemo_train_subset',
     for file_path in file_list:
         try:
             eeg_df = pd.read_csv(file_path)
-            eeg_signal = eeg_df.mean(axis=1).values
-
+            eeg_signal = eeg_df.mean(axis=1).values  # average all channels
             relative_path = os.path.relpath(file_path, input_base_dir)
             relative_dir = os.path.dirname(relative_path)
             out_dir = os.path.join(output_base_dir, relative_dir)
-
             sample_name = os.path.splitext(os.path.basename(file_path))[0]
-
             preprocess_eeg_signal(eeg_signal, out_dir, sample_name)
-
         except Exception as e:
             print(f"Error processing {file_path}: {e}")
 
 if __name__ == "__main__":
-    preprocess_all_eeg_files()
+    preprocess_all_eeg_files('data/gameemo_train_subset', 'data/processed/eeg/train')
+    preprocess_all_eeg_files('data/gameemo_test_subset', 'data/processed/eeg/test')
