@@ -5,48 +5,97 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 30px; text-align: center; }
-        #emotions { font-size: 24px; margin-top: 20px; }
-        #combined { font-weight: bold; color: blue; margin-top: 10px; }
-        button { padding: 10px 20px; font-size: 16px; }
-        #realTimeEmotion { font-size: 48px; color: #333; margin-top:40px; }
+        #resultContainer {
+            font-size: 20px; 
+            margin-top: 20px; 
+            border: 1px solid #ccc; 
+            padding: 15px; 
+            display: inline-block;
+            white-space: pre-line;
+            min-width: 300px;
+            text-align: left;
+        }
+        button { padding: 10px 20px; font-size: 16px; margin: 5px; }
+        #realTimeEmotion { font-size: 48px; color: #333; margin-top: 40px; }
+        #status { font-style: italic; margin-top: 10px; color: #555; }
+        #faceFrame {
+            margin-top: 20px;
+            max-width: 320px;
+            max-height: 240px;
+            border: 1px solid #ddd;
+        }
     </style>
 </head>
 <body>
     <h1>VibeFusion Real-Time Emotion Recognition</h1>
-    
-    <button onclick="fetchEmotion()">Get Emotion</button>
-    
-    <div id="emotions"></div>
-    <div id="combined"></div>
+
+    <button onclick="callApi('/get-facial-emotion')">Get Facial Emotion</button>
+    <button onclick="callApi('/get-speech-emotion')">Get Speech Emotion</button>
+    <button onclick="callApi('/get-eeg-emotion')">Get EEG Emotion</button>
+    <button onclick="callApi('/get-combined-emotion')">Get Combined Emotion</button>
+
+    <div id="status">Status: Waiting...</div>
+
+    <div id="resultContainer">Emotion result will appear here</div>
+
+    <img id="faceFrame" src="" alt="Facial Frame will appear here" style="display:none;"/>
 
     <h2>Real-time Emotion Updates</h2>
     <div id="realTimeEmotion">Waiting for emotion data...</div>
 
     <script>
-        // Fetch emotion on button click from /get-emotion API
-        async function fetchEmotion() {
-            const response = await fetch('/get-emotion');
-            if (response.ok) {
-                const data = await response.json();
-                document.getElementById('emotions').innerHTML = `
-                    Facial: ${data.facial_emotion} <br>
-                    Speech: ${data.speech_emotion} <br>
-                    EEG: ${data.eeg_emotion}
-                `;
-                document.getElementById('combined').textContent = 
-                    'Combined Emotion: ' + data.combined_emotion;
-            } else {
-                alert('Error fetching emotion data');
-            }
+        const statusEl = document.getElementById('status');
+        const resultContainer = document.getElementById('resultContainer');
+        const realTimeEmotion = document.getElementById('realTimeEmotion');
+        const faceFrame = document.getElementById('faceFrame');
+
+        function callApi(endpoint) {
+            statusEl.innerText = 'Status: Processing...';
+            resultContainer.innerText = '';
+            faceFrame.style.display = 'none';
+
+            fetch(endpoint)
+                .then(res => res.json())
+                .then(data => {
+                    // Display status update
+                    statusEl.innerText = 'Status: Complete';
+
+                    // Format and display emotion results
+                    let displayText = '';
+                    for (const [key, value] of Object.entries(data)) {
+                        if (key !== 'frame') {
+                            displayText += `${key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}: ${value}\n`;
+                        }
+                    }
+                    resultContainer.innerText = displayText.trim();
+
+                    // For facial/combo emotions show the captured frame image
+                    if (data.frame) {
+                        faceFrame.src = 'data:image/jpeg;base64,' + data.frame;
+                        faceFrame.style.display = 'block';
+                    }
+                }).catch(err => {
+                    console.error(err);
+                    statusEl.innerText = 'Status: Error fetching emotion data.';
+                });
         }
 
-        // Initialize Socket.IO client for real-time emotion updates
+        // Initialize Socket.IO client
         const socket = io();
 
-        // Listen for 'update_emotion' event and update display
+        // Listen for real-time backend status
+        socket.on('backend_status', function(data) {
+            statusEl.innerText = 'Status: ' + data.message;
+        });
+
+        // Listen for real-time emotion update events
         socket.on('update_emotion', function(data) {
-            document.getElementById('realTimeEmotion').innerText = 
-                `Detected Emotion: ${data.emotion}`;
+            realTimeEmotion.innerText = `Detected Emotion: ${data.emotion}`;
+
+            if (data.image) {
+                faceFrame.src = 'data:image/jpeg;base64,' + data.image;
+                faceFrame.style.display = 'block';
+            }
         });
     </script>
 </body>
