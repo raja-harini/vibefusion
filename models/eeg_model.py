@@ -7,14 +7,14 @@ from tensorflow.keras.layers import Conv1D, MaxPooling1D, Flatten, Dense, Dropou
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 
 # Path to labels CSV (update as needed)
-LABELS_CSV_PATH = 'data/gameemo_train_subset/labels_train.csv'
+LABELS_CSV_PATH = 'data/processed/eeg/labels_train.csv'
 
 # Load label CSV to dictionary: filename -> emotion string
 label_df = pd.read_csv(LABELS_CSV_PATH)
 print("Columns in labels CSV:", label_df.columns)
 
 # Use correct column name as per your CSV
-file_to_label = dict(zip(label_df['file_path'], label_df['emotion']))
+file_to_label = dict(zip(label_df['file_path'], label_df['label']))
 
 # Map emotion strings to integer class IDs (update classes & labels per your dataset)
 label_map = {'neutral': 0, 'happy': 1, 'sad': 2, 'angry': 3, 'fearful': 4}

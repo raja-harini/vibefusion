@@ -14,19 +14,19 @@ print(f"Loaded model from: {model_path}")
 print(model.summary())
 
 # Paths
-test_label_csv = 'data/gameemo_test_subset/labels_test.csv'
+test_label_csv = 'data/processed/eeg/labels_test.csv'
 test_data_dir = 'data/processed/eeg/test'
 
 # Load test CSV with file paths and labels
 test_df = pd.read_csv(test_label_csv)
-print("Unique labels in test set:", test_df['emotion'].unique())
+print("Unique labels in test set:", test_df['label'].unique())
 
 # Define emotion labels EXACTLY in the order model was trained
-emotion_labels = ['neutral', 'joy', 'surprise', 'anger', 'fear', 'sadness', 'disgust']  # Adjust as per training
+emotion_labels = ['neutral', 'joy', 'surprise', 'anger', 'fear', 'sadness', 'disgust']  # Adjust per training
 label_to_id = {label: idx for idx, label in enumerate(emotion_labels)}
 
 print("Emotion labels:", emotion_labels)
-print("Test label distribution:\n", test_df['emotion'].value_counts())
+print("Test label distribution:\n", test_df['label'].value_counts())
 
 # Prepare test features and true labels arrays
 X_test = []
@@ -36,26 +36,25 @@ for idx, row in test_df.iterrows():
     npy_path = os.path.join(test_data_dir, row['file_path'])
     if os.path.exists(npy_path):
         feature = np.load(npy_path)
-        # Debug shape and dtype checks
         if idx < 3:
             print(f"Sample {idx} loaded from {row['file_path']} with shape {feature.shape}")
             print(f"Feature min/max before normalization: {feature.min()}/{feature.max()}")
 
-        # Normalize data, normalize per sample is recommended if needed
+        # Normalize per sample
         norm_feature = (feature - np.mean(feature)) / np.std(feature)
-        
-        # Add channel dim if needed
-        norm_feature = np.expand_dims(norm_feature, axis=0)
+
+        # Add channel dim at last axis
+        norm_feature = np.expand_dims(norm_feature, axis=-1)  # Shape: (256, 1)
 
         X_test.append(norm_feature)
-        y_true.append(label_to_id.get(row['emotion'], label_to_id['neutral']))
+        y_true.append(label_to_id.get(row['label'], label_to_id['neutral']))
     else:
         print(f"Warning: Feature file not found: {npy_path}")
 
 if not X_test:
     raise Exception("No test features loaded! Check paths and data availability.")
 
-X_test = np.array(X_test)
+X_test = np.array(X_test)  # Final shape: (num_samples, 256, 1)
 y_true = np.array(y_true)
 
 print('Loaded X_test shape:', X_test.shape)
