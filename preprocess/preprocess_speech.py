@@ -42,5 +42,6 @@ def preprocess_all_videos(input_dir, output_dir):
 
 # Usage: preprocess all videos in meld_train_subset folder
 if __name__ == "__main__":
-    preprocess_all_videos('data/meld_train_subset', 'data/processed/speech/train')
-    preprocess_all_videos('data/meld_test_subset', 'data/processed/speech/test')
+    # preprocess_all_videos('data/meld_train_subset', 'data/processed/speech/train')
+    # preprocess_all_videos('data/meld_test_subset', 'data/processed/speech/test')
+    preprocess_all_videos('data/meld_train_val_subset', 'data/processed/speech/val')
