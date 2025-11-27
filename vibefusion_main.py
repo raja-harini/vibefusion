@@ -12,8 +12,8 @@ from modules.speech_emotion import get_speech_emotion
 from modules.eeg_emotion import get_eeg_emotion
 from fusion import fuse_emotions
 
-# Import alert system components
-from modules.alert_system import emotion_history, check_alerts_with_emotion
+# Import alert system components and SMS/email triggering function
+from modules.alert_system import emotion_history, check_alerts, alert_user_and_caregiver
 
 # Initialize SocketIO client
 sio = socketio.Client()
@@ -55,12 +55,16 @@ def main_loop():
             print("Facial:", f_emotion, "| Speech:", s_emotion, "| EEG:", e_emotion)
             print("Predicted Emotion:", combined_emotion)
 
+            # Append latest combined emotion to history buffer
             emotion_history.append(combined_emotion)
 
-            if check_alerts_with_emotion(emotion_history):
+            # Check for alert and trigger if needed
+            if check_alerts(emotion_history):
                 print("Alert triggered due to emotional fluctuation.")
-                # Add alert handling logic here
+                alert_message = f"High emotional fluctuation detected: {list(emotion_history)}"
+                alert_user_and_caregiver(alert_message)
 
+            # Send combined emotion to web app via SocketIO
             send_emotion_to_web(combined_emotion)
 
             time.sleep(1)
@@ -69,7 +73,7 @@ def main_loop():
 
 def main():
     try:
-        # Connect to SocketIO server with explicit namespace (default '/')
+        # Connect to SocketIO server (default namespace '/')
         sio.connect('http://localhost:5000', namespaces=['/'])
         main_loop()
     except KeyboardInterrupt:

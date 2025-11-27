@@ -1,47 +1,114 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>VibeFusion Emotion Dashboard</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VibeFusion Real-Time Emotion Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 30px; text-align: center; }
-        #resultContainer {
-            font-size: 20px; 
-            margin-top: 20px; 
-            border: 1px solid #ccc; 
-            padding: 15px; 
-            display: inline-block;
-            white-space: pre-line;
-            min-width: 300px;
-            text-align: left;
+        /* Reset some defaults */
+        * {
+            box-sizing: border-box;
         }
-        button { padding: 10px 20px; font-size: 16px; margin: 5px; }
-        #realTimeEmotion { font-size: 48px; color: #333; margin-top: 40px; }
-        #status { font-style: italic; margin-top: 10px; color: #555; }
-        #faceFrame {
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            margin: 40px auto;
+            max-width: 700px;
+            background: #fafafa;
+            color: #333;
+            line-height: 1.5;
+            padding: 0 20px 40px;
+            user-select: none;
+        }
+        h1 {
+            text-align: center;
+            font-weight: 700;
+            color: #2a3f5f;
+            margin-bottom: 30px;
+        }
+        button {
+            background-color: #2a3f5f;
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            margin: 8px 6px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(42, 63, 95, 0.3);
+            transition: background-color 0.3s ease, transform 0.15s ease;
+        }
+        button:hover {
+            background-color: #3e5786;
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        #status {
+            font-style: italic;
+            color: #666;
+            margin-top: 15px;
+            text-align: center;
+            min-height: 22px;
+        }
+        #resultContainer {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 20px;
+            font-size: 18px;
+            white-space: pre-wrap;
+            min-height: 120px;
             margin-top: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            color: #1c2533;
+        }
+        #faceFrame {
+            display: block;
+            margin: 28px auto 0 auto;
             max-width: 320px;
             max-height: 240px;
-            border: 1px solid #ddd;
+            border-radius: 12px;
+            box-shadow: 0 5px 12px rgba(42, 63, 95, 0.2);
+            border: 2px solid #2a3f5f;
+        }
+        #realTimeEmotion {
+            font-size: 48px;
+            color: #2a3f5f;
+            font-weight: 700;
+            margin-top: 45px;
+            text-align: center;
+            min-height: 60px;
+            letter-spacing: 1.2px;
+            text-shadow: 1px 1px 1px #b0c4de;
+            user-select: text;
+        }
+        #buttonGroup {
+            text-align: center;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
     <h1>VibeFusion Real-Time Emotion Recognition</h1>
 
-    <button onclick="callApi('/get-facial-emotion')">Get Facial Emotion</button>
-    <button onclick="callApi('/get-speech-emotion')">Get Speech Emotion</button>
-    <button onclick="callApi('/get-eeg-emotion')">Get EEG Emotion</button>
-    <button onclick="callApi('/get-combined-emotion')">Get Combined Emotion</button>
+    <div id="buttonGroup">
+        <button onclick="callApi('/get-facial-emotion')">Get Facial Emotion</button>
+        <button onclick="callApi('/get-speech-emotion')">Get Speech Emotion</button>
+        <button onclick="callApi('/get-eeg-emotion')">Get EEG Emotion</button>
+        <button onclick="callApi('/get-combined-emotion')">Get Combined Emotion</button>
+    </div>
 
     <div id="status">Status: Waiting...</div>
 
-    <div id="resultContainer">Emotion result will appear here</div>
+    <div id="resultContainer" aria-live="polite" aria-atomic="true">Emotion result will appear here</div>
 
-    <img id="faceFrame" src="" alt="Facial Frame will appear here" style="display:none;"/>
+    <img id="faceFrame" src="" alt="Live facial frame from webcam" aria-label="Webcam face capture" style="display:none;" />
 
-    <h2>Real-time Emotion Updates</h2>
-    <div id="realTimeEmotion">Waiting for emotion data...</div>
+    <h2 style="text-align:center; margin-top: 50px; color: #394f78; font-weight: 600;">Real-time Emotion Updates</h2>
+    <div id="realTimeEmotion" aria-live="polite" aria-atomic="true" role="status">Waiting for emotion data...</div>
 
     <script>
         const statusEl = document.getElementById('status');
@@ -57,10 +124,8 @@
             fetch(endpoint)
                 .then(res => res.json())
                 .then(data => {
-                    // Display status update
                     statusEl.innerText = 'Status: Complete';
 
-                    // Format and display emotion results
                     let displayText = '';
                     for (const [key, value] of Object.entries(data)) {
                         if (key !== 'frame') {
@@ -69,7 +134,6 @@
                     }
                     resultContainer.innerText = displayText.trim();
 
-                    // For facial/combo emotions show the captured frame image
                     if (data.frame) {
                         faceFrame.src = 'data:image/jpeg;base64,' + data.frame;
                         faceFrame.style.display = 'block';
@@ -80,15 +144,12 @@
                 });
         }
 
-        // Initialize Socket.IO client
         const socket = io();
 
-        // Listen for real-time backend status
         socket.on('backend_status', function(data) {
             statusEl.innerText = 'Status: ' + data.message;
         });
 
-        // Listen for real-time emotion update events
         socket.on('update_emotion', function(data) {
             realTimeEmotion.innerText = `Detected Emotion: ${data.emotion}`;
 
