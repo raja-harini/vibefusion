@@ -45,3 +45,5 @@ data/meld_train_subset/*
 # processed folder — track everything inside it
 ###############
 !data/processed/
+
+dont.env

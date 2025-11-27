@@ -2,6 +2,7 @@ import sys
 import os
 import time
 import socketio
+import cv2
 
 # Add current directory to system path to import modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -11,22 +12,40 @@ from modules.speech_emotion import get_speech_emotion
 from modules.eeg_emotion import get_eeg_emotion
 from fusion import fuse_emotions
 
-# Connect to Flask SocketIO server
+# Import alert system components
+from modules.alert_system import emotion_history, check_alerts_with_emotion
+
+# Initialize SocketIO client
 sio = socketio.Client()
-sio.connect('http://localhost:5000')  # Change if deployed elsewhere
+
+@sio.event
+def connect():
+    print("Connected to SocketIO server")
+
+@sio.event
+def disconnect():
+    print("Disconnected from SocketIO server")
 
 def send_emotion_to_web(emotion):
-    if emotion:
+    if emotion and sio.connected:
         sio.emit('send_emotion', {'emotion': emotion})
+    else:
+        print("SocketIO not connected. Cannot send emotion.")
 
-def main():
+def main_loop():
+    cap = cv2.VideoCapture(0)
     try:
         while True:
-            f_emotion = get_facial_emotion()
+            ret, frame = cap.read()
+            if not ret:
+                print("Failed to capture frame from webcam.")
+                break
+
+            f_emotion = get_facial_emotion(frame)
             s_emotion = get_speech_emotion()
             e_emotion = get_eeg_emotion()
 
-            # Debug prints to diagnose type issues and values
+            # Debug prints to verify types and values
             print("Facial emotion type:", type(f_emotion), "value:", f_emotion)
             print("Speech emotion type:", type(s_emotion), "value:", s_emotion)
             print("EEG emotion type:", type(e_emotion), "value:", e_emotion)
@@ -36,14 +55,28 @@ def main():
             print("Facial:", f_emotion, "| Speech:", s_emotion, "| EEG:", e_emotion)
             print("Predicted Emotion:", combined_emotion)
 
-            # Send combined emotion to Flask web app
+            emotion_history.append(combined_emotion)
+
+            if check_alerts_with_emotion(emotion_history):
+                print("Alert triggered due to emotional fluctuation.")
+                # Add alert handling logic here
+
             send_emotion_to_web(combined_emotion)
 
-            # Sleep briefly to avoid spamming updates; adjust as needed
             time.sleep(1)
+    finally:
+        cap.release()
 
+def main():
+    try:
+        # Connect to SocketIO server with explicit namespace (default '/')
+        sio.connect('http://localhost:5000', namespaces=['/'])
+        main_loop()
     except KeyboardInterrupt:
         print("Exiting emotion detection.")
+    finally:
+        if sio.connected:
+            sio.disconnect()
 
 if __name__ == "__main__":
     main()
