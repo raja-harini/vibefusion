@@ -3,12 +3,23 @@ import cv2
 import numpy as np
 import base64
 import time
-from deepface import DeepFace
-import librosa
-import sounddevice as sd
+import sys
+import os
+from datetime import datetime
 from collections import deque
+import threading
 
-# Custom CSS
+# Add current directory to system path to import modules (EXACTLY like vibefusion_main.py)
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# Import YOUR exact modules
+from modules.facial_emotion import get_facial_emotion
+from modules.speech_emotion import get_speech_emotion
+from modules.eeg_emotion import get_eeg_emotion
+from fusion import fuse_emotions
+from modules.alert_system import emotion_history, check_alerts
+
+# Custom CSS (UNCHANGED - all your styling preserved)
 st.markdown("""
 <style>
     * { box-sizing: border-box; }
@@ -90,12 +101,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Page config
+# Page config (UNCHANGED)
 st.set_page_config(page_title="VibeFusion", page_icon="😊", layout="wide")
 
-# Global state
-if 'emotion_history' not in st.session_state:
-    st.session_state.emotion_history = deque(maxlen=30)
+# Global state (UNCHANGED structure)
 if 'status_msg' not in st.session_state:
     st.session_state.status_msg = "Ready to detect emotions..."
 if 'result_text' not in st.session_state:
@@ -111,7 +120,7 @@ if 'cap' not in st.session_state:
 if 'live_preview_active' not in st.session_state:
     st.session_state.live_preview_active = False
 
-# Initialize webcam on first run
+# YOUR EXACT camera functions from app.py
 @st.cache_resource
 def init_camera():
     cap = cv2.VideoCapture(0)
@@ -119,157 +128,140 @@ def init_camera():
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     return cap
 
-# Emotion detection functions
-@st.cache_data
-def get_facial_emotion(frame):
-    try:
-        analysis = DeepFace.analyze(frame, actions=['emotion'], enforce_detection=False)
-        return analysis[0]['dominant_emotion'] if isinstance(analysis, list) else analysis['dominant_emotion']
-    except:
-        return "neutral"
+def capture_frame():
+    if st.session_state.cap is None:
+        st.session_state.cap = init_camera()
+    with threading.Lock():
+        ret, frame = st.session_state.cap.read()
+    return frame if ret else None
 
-def get_speech_emotion():
-    try:
-        with st.spinner("Recording audio (3s)..."):
-            fs = 22050
-            duration = 3
-            audio = sd.rec(int(duration * fs), samplerate=fs, channels=1)
-            sd.wait()
-            audio = audio.flatten()
-        
-        mfccs = librosa.feature.mfcc(y=audio, sr=fs, n_mfcc=13)
-        mfccs_mean = np.mean(mfccs.T, axis=0)
-        emotions = ['neutral', 'happy', 'sad', 'angry', 'fearful']
-        return np.random.choice(emotions)
-    except Exception as e:
-        st.error(f"Audio error: {e}")
-        return "neutral"
-
-def get_eeg_emotion():
-    emotions = ['neutral', 'happy', 'sad', 'angry', 'fearful']
-    return np.random.choice(emotions)
-
-def fuse_emotions(facial, speech, eeg):
-    emotions = [facial, speech, eeg]
-    return max(set(emotions), key=emotions.count)
-
-# Frame encoding function - FIXED: Proper base64 encoding without Streamlit media storage
 def encode_frame_to_base64(frame):
     _, buffer = cv2.imencode('.jpg', frame)
     jpg_as_text = base64.b64encode(buffer).decode('utf-8')
     return jpg_as_text
 
-# Main title
+# Main title (UNCHANGED)
 st.markdown("<h1>VibeFusion Real-Time Emotion Recognition</h1>", unsafe_allow_html=True)
 
-# Main layout
+# Main layout (UNCHANGED)
 col1, col2 = st.columns([1, 1])
 
 with col1:
     st.subheader("Emotion Detection Controls")
     
-    # Facial emotion button
+    # Facial emotion button (INTEGRATED with YOUR modules)
     if st.button("🎭 Get Facial Emotion", key="facial_btn"):
         st.session_state.status_msg = "Capturing frame..."
-        if st.session_state.cap is None:
-            st.session_state.cap = init_camera()
-        
-        ret, frame = st.session_state.cap.read()
-        if ret:
-            emotion = get_facial_emotion(frame)
+        frame = capture_frame()
+        if frame is not None:
+            emotion = get_facial_emotion(frame)  # YOUR module
             st.session_state.status_msg = f"Facial: {emotion}"
             st.session_state.result_text = f"Facial Emotion: {emotion}"
             st.session_state.current_emotion = emotion
-            st.session_state.face_image = encode_frame_to_base64(frame)  # FIXED: Direct base64 encoding
+            st.session_state.face_image = encode_frame_to_base64(frame)
             st.session_state.facial_recognition_done = True
-            st.session_state.emotion_history.append(emotion)
+            
+            # YOUR EXACT alert system integration
+            if check_alerts(emotion):
+                st.session_state.status_msg += " 🚨 ALERT TRIGGERED!"
             st.rerun()
     
-    # Speech emotion button
+    # Speech emotion button (INTEGRATED with YOUR modules)
     if st.button("🎤 Get Speech Emotion", key="speech_btn"):
-        emotion = get_speech_emotion()
+        st.session_state.status_msg = "Recording speech..."
+        emotion = get_speech_emotion()  # YOUR module
         st.session_state.status_msg = f"Speech: {emotion}"
         st.session_state.result_text = f"Speech Emotion: {emotion}"
         st.session_state.current_emotion = emotion
-        st.session_state.emotion_history.append(emotion)
+        
+        # YOUR EXACT alert system integration
+        if check_alerts(emotion):
+            st.session_state.status_msg += " 🚨 ALERT TRIGGERED!"
         st.rerun()
     
-    # EEG emotion button
+    # EEG emotion button (INTEGRATED with YOUR modules)
     if st.button("🧠 Get EEG Emotion", key="eeg_btn"):
-        emotion = get_eeg_emotion()
+        st.session_state.status_msg = "Analyzing EEG..."
+        emotion = get_eeg_emotion()  # YOUR module
         st.session_state.status_msg = f"EEG: {emotion}"
         st.session_state.result_text = f"EEG Emotion: {emotion}"
         st.session_state.current_emotion = emotion
-        st.session_state.emotion_history.append(emotion)
+        
+        # YOUR EXACT alert system integration
+        if check_alerts(emotion):
+            st.session_state.status_msg += " 🚨 ALERT TRIGGERED!"
         st.rerun()
     
-    # Combined emotion button
+    # Combined emotion button (INTEGRATED with YOUR fuse_emotions)
     if st.button("🔗 Get Combined Emotion", key="combined_btn"):
         st.session_state.status_msg = "Analyzing all modalities..."
-        if st.session_state.cap is None:
-            st.session_state.cap = init_camera()
-        
-        ret, frame = st.session_state.cap.read()
-        facial = get_facial_emotion(frame) if ret else "neutral"
+        frame = capture_frame()
+        facial = get_facial_emotion(frame) if frame is not None else "neutral"
         speech = get_speech_emotion()
         eeg = get_eeg_emotion()
-        combined = fuse_emotions(facial, speech, eeg)
+        combined = fuse_emotions(facial, speech, eeg)  # YOUR fusion module
         
         st.session_state.status_msg = f"Combined: {combined}"
         st.session_state.result_text = f"Facial: {facial}\nSpeech: {speech}\nEEG: {eeg}\nCombined: {combined}"
         st.session_state.current_emotion = combined
-        st.session_state.face_image = encode_frame_to_base64(frame) if ret else None  # FIXED
-        st.session_state.facial_recognition_done = True
-        st.session_state.emotion_history.append(combined)
+        if frame is not None:
+            st.session_state.face_image = encode_frame_to_base64(frame)
+            st.session_state.facial_recognition_done = True
+        
+        # YOUR EXACT alert system integration on COMBINED emotion
+        if check_alerts(combined):
+            st.session_state.status_msg += " 🚨 ALERT TRIGGERED!"
         st.rerun()
 
 with col2:
-    # Status
+    # Status (UNCHANGED)
     st.markdown(f'<div id="status">Status: {st.session_state.status_msg}</div>', unsafe_allow_html=True)
     
-    # Result container
+    # Result container (UNCHANGED)
     st.markdown(f'<div id="resultContainer">{st.session_state.result_text}</div>', unsafe_allow_html=True)
     
-    # Face frame - FIXED: Direct base64 display without media storage
+    # Face frame (UNCHANGED)
     if st.session_state.facial_recognition_done and st.session_state.face_image:
         st.markdown(f'<img id="faceFrame" src="data:image/jpeg;base64,{st.session_state.face_image}" />', unsafe_allow_html=True)
     else:
         st.markdown('<div style="height: 240px; display: flex; align-items: center; justify-content: center; color: #999; font-style: italic;">No facial recognition performed yet</div>', unsafe_allow_html=True)
 
-# Real-time emotion display
+# Real-time emotion display (UNCHANGED)
 st.markdown('<h2 style="text-align:center; margin-top: 50px; color: #394f78; font-weight: 600;">Real-time Emotion Updates</h2>', unsafe_allow_html=True)
 st.markdown(f'<div id="realTimeEmotion">{st.session_state.current_emotion}</div>', unsafe_allow_html=True)
 
-# Emotion history and alerts
+# Emotion history and alerts (ENHANCED with YOUR alert_system)
 st.subheader("📊 Recent Emotions & Alerts")
 col3, col4 = st.columns(2)
 
 with col3:
-    recent_emotions = list(st.session_state.emotion_history)[-10:]
+    recent_emotions = list(emotion_history)[-10:]  # YOUR shared emotion_history
     if recent_emotions:
         emotion_str = " → ".join(recent_emotions)
         st.caption(f"History (last 10): {emotion_str}")
     
-    # Alert detection
-    if len(recent_emotions) >= 5:
-        unique_recent = set(recent_emotions[-5:])
-        if len(unique_recent) >= 4:
+    # YOUR alert system status display
+    if len(emotion_history) >= 5:
+        recent = list(emotion_history)[-5:]
+        if len(set(recent)) >= 4:
             st.error("🚨 **ALERT: High emotional fluctuation detected!**")
+            st.info("✅ Email alerts sent to user & caregiver")
         else:
             st.success("✅ Emotion stable")
 
 with col4:
     if st.button("🗑️ Clear History", use_container_width=False):
-        st.session_state.emotion_history.clear()
+        emotion_history.clear()  # YOUR shared emotion_history
         st.session_state.result_text = ""
         st.session_state.current_emotion = "History cleared"
         st.session_state.facial_recognition_done = False
         st.session_state.face_image = None
-        st.session_state.cap.release() if st.session_state.cap else None
-        st.session_state.cap = None
+        if st.session_state.cap:
+            st.session_state.cap.release()
+            st.session_state.cap = None
         st.rerun()
 
-# Live webcam preview section
+# Live webcam preview section (UNCHANGED logic, YOUR camera handling)
 st.subheader("📹 Live Webcam Preview")
 live_col1, live_col2 = st.columns([3, 1])
 
@@ -288,7 +280,7 @@ with live_col2:
                 st.session_state.cap = None
             st.rerun()
 
-# Live preview logic - FIXED: Proper camera handling
+# Live preview logic (INTEGRATED with YOUR modules)
 if st.session_state.live_preview_active:
     frame_placeholder = st.empty()
     if st.session_state.cap is None:
@@ -296,7 +288,6 @@ if st.session_state.live_preview_active:
     
     st.info("🔴 LIVE PREVIEW ACTIVE - Click STOP to end")
     
-    # Limit preview to avoid infinite loop issues
     preview_frames = st.empty()
     preview_frames.info("Preview running... (10 seconds)")
     
@@ -304,14 +295,18 @@ if st.session_state.live_preview_active:
         if not st.session_state.live_preview_active:
             break
         
-        ret, frame = st.session_state.cap.read()
-        if ret:
+        frame = capture_frame()
+        if frame is not None:
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame_placeholder.image(rgb_frame, channels="RGB", width=400)
             
             try:
-                emotion = get_facial_emotion(frame)
+                emotion = get_facial_emotion(frame)  # YOUR module
                 st.caption(f"Live emotion: {emotion}")
+                
+                # YOUR alert system in live preview
+                if check_alerts(emotion):
+                    st.error("🚨 Live alert triggered!")
             except:
                 pass
         
@@ -323,6 +318,6 @@ if st.session_state.live_preview_active:
         st.session_state.cap = None
     st.rerun()
 
-# Footer
+# Footer (UNCHANGED)
 st.markdown("---")
 st.markdown("*VibeFusion - Multimodal Emotion Recognition System*")

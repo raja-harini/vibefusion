@@ -3,6 +3,7 @@ import os
 import time
 import socketio
 import cv2
+from datetime import datetime
 
 # Add current directory to system path to import modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -12,8 +13,8 @@ from modules.speech_emotion import get_speech_emotion
 from modules.eeg_emotion import get_eeg_emotion
 from fusion import fuse_emotions
 
-# Import alert system components and SMS/email triggering function
-from modules.alert_system import emotion_history, check_alerts, alert_user_and_caregiver
+# Import alert system components
+from modules.alert_system import emotion_history, check_alerts
 
 # Initialize SocketIO client
 sio = socketio.Client()
@@ -59,10 +60,8 @@ def main_loop():
             emotion_history.append(combined_emotion)
 
             # Check for alert and trigger if needed
-            if check_alerts(emotion_history):
+            if check_alerts(combined_emotion):
                 print("Alert triggered due to emotional fluctuation.")
-                alert_message = f"High emotional fluctuation detected: {list(emotion_history)}"
-                alert_user_and_caregiver(alert_message)
 
             # Send combined emotion to web app via SocketIO
             send_emotion_to_web(combined_emotion)
